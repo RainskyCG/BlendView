@@ -1,0 +1,31 @@
+{
+  "FileVersion": 3,
+  "Version": 2,
+  "VersionName": "1.1.0",
+  "EngineVersion": "5.7.0",
+  "FriendlyName": "BlendView",
+  "Description": "Blender-style viewport navigation, modal transforms, snapping, and graph editing workflow for Unreal Editor.",
+  "Category": "Editor",
+  "CreatedBy": "RainskyCG",
+  "CreatedByURL": "https://github.com/RainskyCG",
+  "DocsURL": "https://github.com/RainskyCG/BlendView#readme",
+  "SupportURL": "https://github.com/RainskyCG/BlendView/issues",
+  "Icon128": "Resources/Icon128.png",
+  "CanContainContent": false,
+  "IsBetaVersion": false,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "BlendView",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    }
+  ],
+  "SupportedTargetPlatforms": [
+    "Win64"
+  ]
+}
