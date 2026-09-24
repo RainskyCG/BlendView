@@ -2,28 +2,20 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-BlendView 是一个面向 Unreal Editor 的开源编辑器插件，将 Blender 风格的视口导航、G/R/S 模态变换、吸附、3D 游标、图表编辑和快捷工作流带入 UE。
+BlendView 是一个面向 Unreal 的插件，将 Blender 风格的G/R/S 变换、视口导航、吸附、3D游标等工作流带入 UE。
 
 ![BlendView 图标](Resources/Icon128.png)
 
-## 兼容性
+## 兼容版本
 
-| 项目 | 支持范围 |
-| --- | --- |
 | Unreal Engine | 5.6、5.7、5.8 |
-| 平台 | Windows 64 位 |
-| 插件类型 | 仅编辑器，不进入打包游戏运行时 |
-
-不同 UE 次版本使用不同的编辑器二进制接口。源码安装时请使用目标引擎重新编译；发布包也应与 UE 版本对应。
 
 ## 安装
 
 1. 下载或克隆本仓库。
-2. 将仓库目录放到项目的 `Plugins/BlendView`。
+2. 将对应版本的插件解压至项目的 `Plugins/BlendView`。
 3. 使用目标 UE 版本打开项目并允许编译，或先编译项目的 Editor Target。
 4. 在 **编辑 > 插件** 中确认 BlendView 已启用，然后重启编辑器。
-
-源码仓库不提交 `Binaries` 和 `Intermediate`。如果项目是纯蓝图项目，可以临时添加一个空 C++ 类，或使用预先为对应 UE 版本构建的插件包。
 
 ## 快速开始
 
