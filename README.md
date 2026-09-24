@@ -2,31 +2,44 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-一个面向 Unreal 的编辑器插件，将 Blender 风格的G/R/S 变换、视口导航、吸附、3D游标等工作流带入 UE。
-所有逻辑和计算方式都遵循 Blender 的官方源码，力求还原 Blender 中的原生操作手感。
+| 版本支持 | 5.6、5.7、5.8 |
+| ---- | ----------- |
 
-## 兼容版本
-
-Unreal Engine | 5.6-5.8 
+BlendView是一个面向Unreal 编辑器的插件，将 Blender 风格的 G/R/S 变换、视口导航、吸附和 3D 游标等工具带入 UE，参考了 Blender 官方源码，力求还原 Blender 的原生操作手感。
 
 ## 安装
 
-1. 下载安装包并解压。
-2. 将对应版本的插件复制至项目的 `Plugins/BlendView`。
-3. 使用目标 UE 版本打开项目并允许编译，或先编译项目的 Editor Target。
-4. 在 **编辑 > 插件** 面板中确认 BlendView 已启用，然后重启编辑器。
+1. 下载并解压安装包，选择对应的 UE 版本。
+2. 选择一种安装方式：
+    - **当前项目**：将 `BlendView` 文件夹复制到 `项目目录/Plugins/`
+    - **整个 UE**：将 `BlendView` 文件夹复制到 `UE安装目录/Engine/Plugins/Marketplace/`
+3. 确认插件文件路径为 `BlendView/BlendView.uplugin`。
+4. 在 **编辑 > 插件** 中启用 BlendView，然后重启编辑器。
 
 ## 快速开始
 
-### 启用 / 禁用
+![BlendView 快速菜单](Docs/assets/images/quick-menu.jpg)
 
-![BlendView 工具栏开关](Docs/assets/images/toolbar-toggle.jpg)
+点击顶部工具栏的 BlendView 按钮可快速开启暂停插件，也可在拓展菜单中的单独开启或禁用对应的模块，点击设置可快速打开插件设置面板。
 
-使用顶部工具栏的 BlendView 按钮可临时启用或禁用插件。
+![BlendView 设置面板](Docs/assets/images/settings-panel.png)
 
-![功能模块设置](Docs/assets/images/feature-module-settings.jpg)
+BlendView 的快捷键优先级高于原生快捷键，你可以在设置界面修改或禁用冲突的快捷键。
 
-模块功能相互独立，可在插件设置中单独启用或关闭：G/R/S变换、中键导航、吸附、居中工具栏、3D 游标、饼菜单、命令搜索、快速收藏夹、移动到文件夹和图表工具。
+## 中键视口导航
+
+![鼠标视口导航](Docs/assets/gifs/mouse-navigation.gif)
+
+用于在 UE 场景视口中使用 Blender 风格的中键导航。
+
+- `MMB`：环绕视图。
+- `Shift + MMB`：平移视图。
+- `Ctrl + MMB`：缩放视图。
+
+![轴向视图对齐](Docs/assets/gifs/axis-view-align.gif)
+
+- `Alt + MMB`：对齐到最近轴向视图。
+- 右键漫游过程中按住 `Shift`：加速。
 
 ## G/R/S 变换
 
@@ -36,7 +49,7 @@ Unreal Engine | 5.6-5.8
 - `Shift + D`：复制后移动。
 - `Alt + G/R/S`：重置位置 / 旋转 / 缩放。
 
-G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 Blender 风格的提示栏，再次按下将触发对应模态的子功能。
+G/R/S 将进入临时变换状态，可使用可选子命令，并提供类 Blender 风格的底部提示栏：
 
 ![变换提示栏](Docs/assets/images/transform-feedback.jpg)
 
@@ -60,39 +73,22 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 | `H` | 显示 / 隐藏底部提示栏 |
 | `R/R` | 自由旋转 |
 
-[查看轴向与平面约束演示](Docs/assets/videos/axis-plane-constraints.mp4)
+https://github.com/user-attachments/assets/5d278dc7-6d1b-4dd0-9dfb-ee351e36120b
 
 - `G` 后按 `X`：沿 X 移动。
 - `G` 后按 `Shift + Z`：在 XY 平面移动。
 - `R` 后按 `Z`：绕 Z 旋转。
 - `S` 后按 `X`：沿 X 缩放。
 
-## 中键视口导航
-
-![鼠标视口导航](Docs/assets/gifs/mouse-navigation.gif)
-
-在 UE 场景视口中使用 Blender 风格的中键导航。
-
-- `MMB`：环绕视图。
-- `Shift + MMB`：平移视图。
-- `Ctrl + MMB`：缩放视图。
-
-![轴向视图对齐](Docs/assets/gifs/axis-view-align.gif)
-
-- `Alt + MMB`：对齐到最近轴向视图。
-- 右键漫游过程中按住 `Shift`：加速。
-
-为防止和变换模块冲突，RMB 飞行时，BlendView 会阻止变换模块功能的启用。也就是说，`RMB + S` 会继续作为向后飞行，而不会触发缩放。
-
 ## 吸附
 
-[查看临时吸附演示](Docs/assets/videos/temporary-snap.mp4)
+https://github.com/user-attachments/assets/9bc50e9e-3ade-4cfa-b546-4f52d196f892
 
 吸附用于把所选物体上的源点，对齐到场景中的目标点。
 
 - `G` 中按住 `Ctrl`：开启临时吸附。
 
-[查看重设吸附基准演示](Docs/assets/videos/reset-snap-base.mp4)
+https://github.com/user-attachments/assets/beaece9a-bd59-4de7-9a50-a67f5bde335f
 
 - `B`：重设吸附基准。
 
@@ -102,7 +98,7 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 ### 吸附设置
 
-![居中吸附工具栏](Docs/assets/images/center-snap-toolbar.jpg)
+![BlendView 吸附设置](Docs/assets/images/center-snap-toolbar.jpg)
 
 **通用：**
 
@@ -125,7 +121,7 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 ### 变换轴心点
 
-![居中变换轴心点工具栏](Docs/assets/images/center-pivot-toolbar.jpg)
+![BlendView 变换轴心点设置](Docs/assets/images/center-pivot-toolbar.jpg)
 
 - **边界框中心**：以所选物体整体包围盒的中心作为旋转和缩放中心。
 - **3D 游标**：以 3D 游标位置作为变换中心。
@@ -135,7 +131,7 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 ## 图表编辑
 
-[查看图表变换演示](Docs/assets/videos/graph-transform.mp4)
+https://github.com/user-attachments/assets/e2dcbc3d-54f7-46bd-9d1a-647b463f2c50
 
 图表工具把同样的模态操作习惯带到蓝图、材质和其他受支持的 GraphEditor 面板。
 
@@ -143,7 +139,7 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 - `X/Y`：图表约束。
 - `Ctrl`：支持时启用图表吸附。
 
-[查看图表快捷操作演示](Docs/assets/videos/graph-actions.mp4)
+https://github.com/user-attachments/assets/e399a782-94f8-4d68-9e93-2c3a7a6dce6d
 
 - `Ctrl + Shift + LMB`：预览材质节点。
 - `Ctrl + X`：支持时删除并重连。
@@ -151,7 +147,7 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 ## 实验功能
 
-实验功能是 BlendView 中仍在继续打磨的模块，通常已经可以使用，但可能只适用于特定编辑器上下文，或在交互细节上继续调整。
+一些仍在测试中的功能，但可能只适用于特定编辑器上下文。
 
 ### 游标
 
@@ -165,30 +161,29 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 ![游标与原点饼菜单](Docs/assets/images/cursor-origin-pie-menu.jpg)
 
-- **游标与原点饼菜单**用于快速移动 3D 游标、移动所选物体到游标，或调整物体原点。
-- **打开方式**：按住 `Shift + S` 呼出菜单，松开 `Shift` 关闭菜单。
+`Shift + S`  用于定位 3D 游标、移动所选物体到游标，或调整物体原点。
 
 **游标与原点：**
 
-- **到原点**：将 3D 游标移动到世界原点，并重置游标旋转。
-- **到所选**：将 3D 游标移动到当前所选物体；多选时移动到所选物体的整体中心。
-- **到游标，偏移**：将所选物体整体移动到 3D 游标位置，保持物体之间的相对偏移。
-- **到游标**：将所选物体移动到 3D 游标位置，并使用游标的旋转方向对齐。
+- **到原点**：将游标移动到原点，并重置游标旋转。
+- **到所选**：将游标移动到当前所选；多选时移动到所选的整体中心。
+- **到游标，偏移**：将所选整体移动到游标，保持物体间相对偏移。
+- **到游标**：将所选移动到游标，并使用游标的旋转方向对齐。
 
 **物体原点：**
 
 - **到几何中心**：将 Actor 枢轴点移动到自身几何中心。
-- **到游标**：将 Actor 枢轴点移动到 3D 游标位置。
-- **到活动**：将 Actor 枢轴点移动到活动项（末选项）枢轴点位置。
+- **到游标**：将 Actor 枢轴点移动到游标。
+- **到活动**：将 Actor 枢轴点移动到活动项（末选项）枢轴点。
 - **到底部**：将 Actor 枢轴点移动到物体底部中心。
 
 ### 搜索
 
-![命令搜索菜单](Docs/assets/images/command-search-menu.jpg)
+![BlendView 命令搜索](Docs/assets/images/command-search-menu.jpg)
 
-- `F3`：搜索命令。
+ `F3`：搜索
 
-提供类 Blender 的 `F3` 命令搜索。输入关键词即可查找当前上下文可用的命令，左键点击直接执行。右键点击命令可添加到 `Q` 快速收藏夹；支持快捷键的命令也可以在这里设置或修改快捷键。
+类 Blender 的 `F3` 命令搜索。输入关键词即可查找当前上下文可用的命令，左键点击直接执行。右键点击命令可添加到 `Q` 快速收藏夹；支持快捷键的命令也可以在这里设置或修改快捷键。
 
 ### 快速收藏夹
 
@@ -204,28 +199,4 @@ G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 
 
 - `M`：打开快速移动菜单。
 
-类似 Blender 的 `M` 快速移动菜单，用于将当前选中的 Actor 移动到 World Outliner 文件夹。
-
-## 设置
-
-![BlendView 快速菜单](Docs/assets/images/quick-menu.jpg)
-
-![BlendView 设置面板](Docs/assets/images/settings-panel.jpg)
-
-设置包括模块开关、快捷键、导航、吸附、轴心点模式、居中工具栏、3D 游标、命令搜索、快速收藏夹、图表工具、提示栏、语言和实验功能。
-
-BlendView 的快捷键优先级高于原生快捷键。如果 Unreal 存在相同快捷键，将优先使用 BlendView 的快捷键。
-
-## 从源码构建与测试
-
-使用目标 UE 版本编译项目的 Editor Target。自动化测试名称以 `BlendView` 开头，可通过 Unreal Automation Tool 或 Session Frontend 运行。
-
-提交问题时请附上 UE 精确版本、复现步骤、相关日志，以及是否能在关闭 BlendView 后复现。原生 RMB 飞行由 Unreal Editor 自己处理，BlendView 只在飞行期间协调快捷键冲突。
-
-## 参与贡献
-
-请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。Bug 和功能建议可以提交到 [GitHub Issues](https://github.com/RainskyCG/BlendView/issues)。
-
-## 许可证
-
-BlendView 以 [MIT License](LICENSE) 开源。
+类 Blender 的 `M` 快速移动菜单，用于将当前选中的 Actor 移动到其他文件夹。
