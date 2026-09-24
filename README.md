@@ -2,20 +2,19 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-BlendView 是一个面向 Unreal 的插件，将 Blender 风格的G/R/S 变换、视口导航、吸附、3D游标等工作流带入 UE。
-
-![BlendView 图标](Resources/Icon128.png)
+一个面向 Unreal 的编辑器插件，将 Blender 风格的G/R/S 变换、视口导航、吸附、3D游标等工作流带入 UE。
+所有逻辑和计算方式都遵循 Blender 的官方源码，力求还原 Blender 中的原生操作手感。
 
 ## 兼容版本
 
-| Unreal Engine | 5.6、5.7、5.8 |
+Unreal Engine | 5.6-5.8 
 
 ## 安装
 
-1. 下载或克隆本仓库。
-2. 将对应版本的插件解压至项目的 `Plugins/BlendView`。
+1. 下载安装包并解压。
+2. 将对应版本的插件复制至项目的 `Plugins/BlendView`。
 3. 使用目标 UE 版本打开项目并允许编译，或先编译项目的 Editor Target。
-4. 在 **编辑 > 插件** 中确认 BlendView 已启用，然后重启编辑器。
+4. 在 **编辑 > 插件** 面板中确认 BlendView 已启用，然后重启编辑器。
 
 ## 快速开始
 
@@ -27,24 +26,7 @@ BlendView 是一个面向 Unreal 的插件，将 Blender 风格的G/R/S 变换�
 
 ![功能模块设置](Docs/assets/images/feature-module-settings.jpg)
 
-也可以在设置中的功能组单独关闭模块：导航、G/R/S、吸附、居中工具栏、3D 游标、饼菜单、命令搜索、快速收藏夹、移动到文件夹和图表工具。
-
-## 视口导航
-
-![鼠标视口导航](Docs/assets/gifs/mouse-navigation.gif)
-
-用于在 UE 场景视口中使用 Blender 风格的中键导航。
-
-- `MMB`：环绕视图。
-- `Shift + MMB`：平移视图。
-- `Ctrl + MMB`：缩放视图。
-
-![轴向视图对齐](Docs/assets/gifs/axis-view-align.gif)
-
-- `Alt + MMB`：对齐到最近轴向视图。
-- 右键漫游过程中按住 `Shift`：加速。
-
-为防止和变换模块冲突，RMB 飞行时，BlendView 会阻止变换模块功能的启用。也就是说，`RMB + S` 会继续作为向后飞行，而不会触发缩放。
+模块功能相互独立，可在插件设置中单独启用或关闭：G/R/S变换、中键导航、吸附、居中工具栏、3D 游标、饼菜单、命令搜索、快速收藏夹、移动到文件夹和图表工具。
 
 ## G/R/S 变换
 
@@ -54,7 +36,7 @@ BlendView 是一个面向 Unreal 的插件，将 Blender 风格的G/R/S 变换�
 - `Shift + D`：复制后移动。
 - `Alt + G/R/S`：重置位置 / 旋转 / 缩放。
 
-G/R/S 将进入临时变换状态，可使用可选子命令，并提供类 Blender 风格的底部提示栏：
+G/R/S 按下后将进入类似Blender的临时变换模态，底部将提供类 Blender 风格的提示栏，再次按下将触发对应模态的子功能。
 
 ![变换提示栏](Docs/assets/images/transform-feedback.jpg)
 
@@ -84,6 +66,23 @@ G/R/S 将进入临时变换状态，可使用可选子命令，并提供类 Blen
 - `G` 后按 `Shift + Z`：在 XY 平面移动。
 - `R` 后按 `Z`：绕 Z 旋转。
 - `S` 后按 `X`：沿 X 缩放。
+
+## 中键视口导航
+
+![鼠标视口导航](Docs/assets/gifs/mouse-navigation.gif)
+
+在 UE 场景视口中使用 Blender 风格的中键导航。
+
+- `MMB`：环绕视图。
+- `Shift + MMB`：平移视图。
+- `Ctrl + MMB`：缩放视图。
+
+![轴向视图对齐](Docs/assets/gifs/axis-view-align.gif)
+
+- `Alt + MMB`：对齐到最近轴向视图。
+- 右键漫游过程中按住 `Shift`：加速。
+
+为防止和变换模块冲突，RMB 飞行时，BlendView 会阻止变换模块功能的启用。也就是说，`RMB + S` 会继续作为向后飞行，而不会触发缩放。
 
 ## 吸附
 
