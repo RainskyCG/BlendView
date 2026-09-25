@@ -5,7 +5,7 @@
 | 版本支持 | 5.6、5.7、5.8 |
 | ---- | ----------- |
 
-BlendView是一个面向Unreal 编辑器的插件，将 Blender 风格的 G/R/S 变换、视口导航、吸附和 3D 游标等工具带入 UE，参考了 Blender 官方源码，力求还原 Blender 的原生操作手感。
+BlendView是一个 Unreal 编辑器的插件，将 Blender 风格的 G/R/S 变换、视口导航、吸附和 3D 游标等工具带入 UE，面向在 Blender 和 UE 之间切换，并希望在虚幻引擎中获得更熟悉的视口工作流程的用户。插件参考了 Blender 官方源码，最大程度的还原了在 Blender 中的原生操作手感。
 
 ## 安装
 
