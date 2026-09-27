@@ -122,6 +122,8 @@ private:
 		TUniquePtr<FScopedTransaction> InTransaction,
 		const TArray<TWeakObjectPtr<USceneComponent>>& ExplicitComponents);
 	void AddNativeComponentSnapshot(USceneComponent* Component, UWorld* ViewportWorld);
+	void FinalizeActorPivotTransform();
+	void FinalizeNativeComponentTransform();
 	bool BindModelingPivotTarget(
 		UTransformProxy* TransformProxy,
 		UCombinedTransformGizmo* TransformGizmo,
@@ -148,6 +150,7 @@ private:
 	TUniquePtr<FScopedTransaction> ActiveTransaction;
 	bool bNativeComponentTransformActive = false;
 	bool bManualNativeComponentTransformApplied = false;
+	bool bActorPivotTransformApplied = false;
 	bool bModelingPivotTransformActive = false;
 	bool bModelingPivotEditSequenceActive = false;
 };

@@ -113,6 +113,11 @@ public:
 	float OrbitSensitivity = 0.25f;
 
 	UPROPERTY(EditAnywhere, config, Category="视图导航", meta=(
+		DisplayName="围绕选择旋转",
+		ToolTip="开启后，中键旋转开始时使用当前选择中心作为旋转中心；没有有效选择时使用当前视图中心。"))
+	bool bOrbitAroundSelection = false;
+
+	UPROPERTY(EditAnywhere, config, Category="视图导航", meta=(
 		DisplayName="反转轨道旋转 Y 轴",
 		ToolTip="反转 BlendView 中键轨道旋转的垂直方向。"))
 	bool bInvertOrbitYAxis = false;

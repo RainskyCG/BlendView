@@ -20,6 +20,7 @@
 #include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/Actor.h"
+#include "HAL/PlatformTime.h"
 #include "InputCoreTypes.h"
 #include "LevelEditor.h"
 #include "Misc/AxisDisplayInfo.h"
@@ -54,6 +55,26 @@ namespace
 	constexpr double PrecisionMouseScale = 0.1;
 	constexpr double RotationPrecisionMouseScale = 1.0 / 30.0;
 	constexpr double MinAxisDirectionProbeWorldDistance = 1000.0;
+	constexpr double TransformHitchLogThresholdMilliseconds = 50.0;
+	constexpr double SnapHitchLogThresholdMilliseconds = 25.0;
+
+	void CleanActorRelativeRotationIfNeeded(USceneComponent& Component)
+	{
+		const FRotator CurrentRotation = Component.GetRelativeRotation();
+		const FRotator CleanRotation = FBlendViewTransformPrecision::CleanNearInteger(CurrentRotation);
+		if (CurrentRotation.Pitch == CleanRotation.Pitch &&
+			CurrentRotation.Yaw == CleanRotation.Yaw &&
+			CurrentRotation.Roll == CleanRotation.Roll)
+		{
+			return;
+		}
+
+		Component.SetRelativeRotationExact(
+			CleanRotation,
+			false,
+			nullptr,
+			ETeleportType::TeleportPhysics);
+	}
 
 	FVector GetActorSnapshotPivotWorldLocation(
 		const FTransform& Transform,
@@ -285,6 +306,7 @@ EBlendViewInputResult FBlendViewTransformTool::HandleInput(const FBlendViewInput
 			return EBlendViewInputResult::Handled;
 		}
 
+		const double TransformUpdateStartTime = FPlatformTime::Seconds();
 		switch (Mode)
 		{
 		case EBlendViewTransformMode::Translate:
@@ -303,6 +325,19 @@ EBlendViewInputResult FBlendViewTransformTool::HandleInput(const FBlendViewInput
 			break;
 		}
 		UpdateViewportOverlay();
+		const double TransformUpdateMilliseconds =
+			(FPlatformTime::Seconds() - TransformUpdateStartTime) * 1000.0;
+		if (TransformUpdateMilliseconds >= TransformHitchLogThresholdMilliseconds)
+		{
+			UE_LOG(
+				LogBlendViewTransform,
+				Warning,
+				TEXT("BlendView transform hitch: Mode=%s Duration=%.1fms Actors=%d Components=%d"),
+				GetModeName(),
+				TransformUpdateMilliseconds,
+				TargetAdapter.GetActorSnapshots().Num(),
+				TargetAdapter.GetComponentSnapshots().Num());
+		}
 		return EBlendViewInputResult::Handled;
 	}
 
@@ -2189,7 +2224,20 @@ FVector FBlendViewTransformTool::ApplySnapToTranslationDelta(
 		}
 	}
 
-	if (!SnapSolver.FindTemporarySnapTarget(Query, Candidate))
+	const double SnapTargetSearchStartTime = FPlatformTime::Seconds();
+	const bool bHasSnapTarget = SnapSolver.FindTemporarySnapTarget(Query, Candidate);
+	const double SnapTargetSearchMilliseconds =
+		(FPlatformTime::Seconds() - SnapTargetSearchStartTime) * 1000.0;
+	if (SnapTargetSearchMilliseconds >= SnapHitchLogThresholdMilliseconds)
+	{
+		UE_LOG(
+			LogBlendViewTransform,
+			Warning,
+			TEXT("BlendView snap hitch: Stage=TargetSearch Duration=%.1fms StructuralLimit=%d"),
+			SnapTargetSearchMilliseconds,
+			Query.bEnableStructuralEdgeLimit ? 1 : 0);
+	}
+	if (!bHasSnapTarget)
 	{
 		SnapSession.ClearActiveTarget();
 		return ConstrainedDelta;
@@ -2200,8 +2248,24 @@ FVector FBlendViewTransformTool::ApplySnapToTranslationDelta(
 		Candidate.Normal,
 		Candidate.bHasNormal,
 		Candidate.Kind);
-	const FVector ResolvedSnapSourceBase =
-		ResolveTranslationSnapSourceBase(SnapSourceBase, ConstrainedDelta, bFromOriginal, Candidate);
+	const double SnapSourceSearchStartTime = FPlatformTime::Seconds();
+	const FVector ResolvedSnapSourceBase = ResolveTranslationSnapSourceBase(
+		SnapSourceBase,
+		ConstrainedDelta,
+		bFromOriginal,
+		Candidate);
+	const double SnapSourceSearchMilliseconds =
+		(FPlatformTime::Seconds() - SnapSourceSearchStartTime) * 1000.0;
+	if (SnapSourceSearchMilliseconds >= SnapHitchLogThresholdMilliseconds)
+	{
+		UE_LOG(
+			LogBlendViewTransform,
+			Warning,
+			TEXT("BlendView snap hitch: Stage=SourceSearch Duration=%.1fms Actors=%d Components=%d"),
+			SnapSourceSearchMilliseconds,
+			TargetAdapter.GetActorSnapshots().Num(),
+			TargetAdapter.GetComponentSnapshots().Num());
+	}
 	const FVector SnappedDelta = Candidate.Location - ResolvedSnapSourceBase;
 	return ApplyTranslationConstraint(SnappedDelta);
 }
@@ -2724,11 +2788,7 @@ void FBlendViewTransformTool::ApplyRotationDelta(const double AngleRadians)
 		Actor->SetActorTransform(NewTransform, false, nullptr, ETeleportType::TeleportPhysics);
 		if (USceneComponent* RootComponent = Actor->GetRootComponent())
 		{
-			RootComponent->SetRelativeRotationExact(
-				FBlendViewTransformPrecision::CleanNearInteger(RootComponent->GetRelativeRotation()),
-				false,
-				nullptr,
-				ETeleportType::TeleportPhysics);
+			CleanActorRelativeRotationIfNeeded(*RootComponent);
 		}
 		bChangedAny = true;
 	}
@@ -2786,11 +2846,7 @@ void FBlendViewTransformTool::ApplyFreeRotationDelta(const FQuat& DeltaRotation)
 		Actor->SetActorTransform(NewTransform, false, nullptr, ETeleportType::TeleportPhysics);
 		if (USceneComponent* RootComponent = Actor->GetRootComponent())
 		{
-			RootComponent->SetRelativeRotationExact(
-				FBlendViewTransformPrecision::CleanNearInteger(RootComponent->GetRelativeRotation()),
-				false,
-				nullptr,
-				ETeleportType::TeleportPhysics);
+			CleanActorRelativeRotationIfNeeded(*RootComponent);
 		}
 		bChangedAny = true;
 	}

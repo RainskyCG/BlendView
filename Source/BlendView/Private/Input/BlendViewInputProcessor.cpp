@@ -403,6 +403,7 @@ bool FBlendViewInputProcessor::HandleMouseWheelOrGestureEvent(
 	FBlendViewInputEvent Event;
 	Event.Type = EBlendViewInputEventType::MouseWheel;
 	Event.Key = InWheelEvent.GetEffectingButton();
+	Event.WheelDelta = InWheelEvent.GetWheelDelta();
 	CopyPointerModifiers(InWheelEvent, Event);
 	return InputRouter.IsValid() && IsHandled(InputRouter->RouteInput(Event));
 }

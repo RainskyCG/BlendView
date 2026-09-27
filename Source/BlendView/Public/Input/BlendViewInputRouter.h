@@ -96,7 +96,6 @@ private:
 	bool bSuppressFlightAltUntilKeyUp = false;
 	bool bSuppressNextRightMouseUp = false;
 	bool bSuppressPointerInputUntilRightMouseUp = false;
-	bool bNavigationReleasePassThrough = true;
 	bool bPendingCursorPlacement = false;
 	FBlendViewSceneCursor SceneCursor;
 	FVector2D CursorPlacementStartScreenPosition = FVector2D::ZeroVector;

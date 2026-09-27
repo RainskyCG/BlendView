@@ -22,6 +22,7 @@ struct FBlendViewInputEvent
 	FKey Key;
 	FVector2D ScreenPosition = FVector2D::ZeroVector;
 	FVector2D CursorDelta = FVector2D::ZeroVector;
+	float WheelDelta = 0.0f;
 	bool bShiftDown = false;
 	bool bControlDown = false;
 	bool bAltDown = false;

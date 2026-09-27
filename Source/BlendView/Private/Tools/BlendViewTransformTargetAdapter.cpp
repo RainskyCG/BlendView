@@ -25,6 +25,24 @@ DEFINE_LOG_CATEGORY_STATIC(LogBlendViewTransformTarget, Log, All);
 
 namespace
 {
+	void CleanNativeComponentRelativeRotationIfNeeded(USceneComponent& Component)
+	{
+		const FRotator CurrentRotation = Component.GetRelativeRotation();
+		const FRotator CleanRotation = FBlendViewTransformPrecision::CleanNearInteger(CurrentRotation);
+		if (CurrentRotation.Pitch == CleanRotation.Pitch &&
+			CurrentRotation.Yaw == CleanRotation.Yaw &&
+			CurrentRotation.Roll == CleanRotation.Roll)
+		{
+			return;
+		}
+
+		Component.SetRelativeRotationExact(
+			CleanRotation,
+			false,
+			nullptr,
+			ETeleportType::TeleportPhysics);
+	}
+
 	FVector GetActorEffectivePivotLocation(const AActor& Actor)
 	{
 		return Actor.GetTransform().TransformPosition(Actor.GetPivotOffset());
@@ -524,6 +542,25 @@ void FBlendViewTransformTargetAdapter::RefreshNativeComponentBindings()
 		return;
 	}
 
+	UWorld* ViewportWorld = NativeComponentContext.ViewportClient->GetWorld();
+	bool bNeedsRefresh = false;
+	for (const FBlendViewComponentTransformSnapshot& Snapshot : NativeComponentSnapshots)
+	{
+		const USceneComponent* Component = Snapshot.Component.Get();
+		const USceneComponent* TemplateComponent = Snapshot.TemplateComponent.Get();
+		if (!IsValid(Component) ||
+			(ViewportWorld && Component->GetWorld() != ViewportWorld) ||
+			(TemplateComponent && Component->GetArchetype() != TemplateComponent))
+		{
+			bNeedsRefresh = true;
+			break;
+		}
+	}
+	if (!bNeedsRefresh)
+	{
+		return;
+	}
+
 	TArray<USceneComponent*> CurrentComponents;
 	FBlendViewTransformSelectionResolver::ResolveNativeSceneComponents(
 		NativeComponentContext,
@@ -588,6 +625,8 @@ void FBlendViewTransformTargetAdapter::RefreshNativeComponentBindings()
 
 void FBlendViewTransformTargetAdapter::Confirm()
 {
+	FinalizeActorPivotTransform();
+	FinalizeNativeComponentTransform();
 	EndModelingPivotTransform();
 	ActiveTransaction.Reset();
 }
@@ -603,6 +642,7 @@ void FBlendViewTransformTargetAdapter::CancelTransaction()
 
 void FBlendViewTransformTargetAdapter::End()
 {
+	FinalizeActorPivotTransform();
 	EndModelingPivotTransform();
 	EndNativeComponentTransform();
 	ActiveTransaction.Reset();
@@ -621,6 +661,7 @@ void FBlendViewTransformTargetAdapter::PrepareForEngineExit()
 	ModelingPivotGizmo.Reset();
 	bNativeComponentTransformActive = false;
 	bManualNativeComponentTransformApplied = false;
+	bActorPivotTransformApplied = false;
 	bModelingPivotTransformActive = false;
 	bModelingPivotEditSequenceActive = false;
 }
@@ -637,6 +678,7 @@ void FBlendViewTransformTargetAdapter::Reset()
 	BaselineModelingPivotTransform = FTransform::Identity;
 	bNativeComponentTransformActive = false;
 	bManualNativeComponentTransformApplied = false;
+	bActorPivotTransformApplied = false;
 	bModelingPivotTransformActive = false;
 	bModelingPivotEditSequenceActive = false;
 }
@@ -700,7 +742,14 @@ bool FBlendViewTransformTargetAdapter::RestoreInitialTransforms(
 
 	if (bRestoredAny && GEditor)
 	{
-		GEditor->RedrawLevelEditingViewports(true);
+		if (bActorPivotTransformApplied)
+		{
+			FinalizeActorPivotTransform();
+		}
+		else
+		{
+			GEditor->RedrawLevelEditingViewports(true);
+		}
 	}
 	return true;
 }
@@ -774,12 +823,9 @@ void FBlendViewTransformTargetAdapter::RestoreNativeComponentSnapshotsToInitial(
 			TemplateComponent->Modify();
 			TemplateComponent->SetRelativeTransform(Snapshot.InitialTemplateRelativeTransform);
 			TemplateComponent->PostEditComponentMove(false);
-			TemplateComponent->MarkPackageDirty();
 		}
 	}
-
-	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
-	FEditorSupportDelegates::UpdateUI.Broadcast();
+	FinalizeNativeComponentTransform();
 }
 
 void FBlendViewTransformTargetAdapter::SyncTemplateFromPreview(
@@ -794,7 +840,6 @@ void FBlendViewTransformTargetAdapter::SyncTemplateFromPreview(
 	TemplateComponent->SetRelativeLocation(PreviewComponent->GetRelativeLocation());
 	TemplateComponent->SetRelativeRotationExact(PreviewComponent->GetRelativeRotation());
 	TemplateComponent->SetRelativeScale3D(PreviewComponent->GetRelativeScale3D());
-	TemplateComponent->MarkPackageDirty();
 }
 
 bool FBlendViewTransformTargetAdapter::ApplyNativeComponentSnapshotTransform(
@@ -808,22 +853,15 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentSnapshotTransform(
 		return false;
 	}
 
-	Component->Modify();
 	Component->SetWorldTransform(NewTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	if (bCleanRotation)
 	{
-		Component->SetRelativeRotationExact(
-			FBlendViewTransformPrecision::CleanNearInteger(Component->GetRelativeRotation()),
-			false,
-			nullptr,
-			ETeleportType::TeleportPhysics);
+		CleanNativeComponentRelativeRotationIfNeeded(*Component);
 	}
 	Component->PostEditComponentMove(false);
-	Component->MarkPackageDirty();
 
 	if (USceneComponent* TemplateComponent = Snapshot.TemplateComponent.Get())
 	{
-		TemplateComponent->Modify();
 		SyncTemplateFromPreview(Component, TemplateComponent);
 		TemplateComponent->PostEditComponentMove(false);
 	}
@@ -833,7 +871,58 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentSnapshotTransform(
 
 void FBlendViewTransformTargetAdapter::EndNativeComponentTransform()
 {
+	FinalizeNativeComponentTransform();
 	bNativeComponentTransformActive = false;
+}
+
+void FBlendViewTransformTargetAdapter::FinalizeNativeComponentTransform()
+{
+	if (!bManualNativeComponentTransformApplied)
+	{
+		return;
+	}
+
+	RefreshNativeComponentBindings();
+	for (const FBlendViewComponentTransformSnapshot& Snapshot : NativeComponentSnapshots)
+	{
+		if (USceneComponent* Component = Snapshot.Component.Get())
+		{
+			Component->PostEditComponentMove(true);
+			Component->MarkPackageDirty();
+		}
+		if (USceneComponent* TemplateComponent = Snapshot.TemplateComponent.Get())
+		{
+			TemplateComponent->PostEditComponentMove(true);
+			TemplateComponent->MarkPackageDirty();
+		}
+	}
+
+	if (NativeComponentContext.ViewportClient)
+	{
+		NativeComponentContext.ViewportClient->Invalidate();
+	}
+	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
+	FEditorSupportDelegates::UpdateUI.Broadcast();
+	bManualNativeComponentTransformApplied = false;
+}
+
+void FBlendViewTransformTargetAdapter::FinalizeActorPivotTransform()
+{
+	if (!bActorPivotTransformApplied)
+	{
+		return;
+	}
+
+	for (const FBlendViewActorTransformSnapshot& Snapshot : ActorSnapshots)
+	{
+		if (AActor* Actor = Snapshot.Actor.Get())
+		{
+			Actor->PostEditMove(true);
+			Actor->MarkPackageDirty();
+		}
+	}
+	RefreshActorPivotEditing();
+	bActorPivotTransformApplied = false;
 }
 
 void FBlendViewTransformTargetAdapter::EndModelingPivotTransform()
@@ -932,8 +1021,6 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentTranslationDelta(
 	{
 		NativeComponentContext.ViewportClient->Invalidate();
 	}
-	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
-	FEditorSupportDelegates::UpdateUI.Broadcast();
 	return true;
 }
 
@@ -964,10 +1051,7 @@ bool FBlendViewTransformTargetAdapter::ApplyActorPivotTranslationDelta(
 		const FVector NewPivotOffset =
 			TransformWorldPivotToOffset(Snapshot.BaselineTransform, NewPivotWorldLocation);
 
-		Actor->Modify();
 		Actor->SetPivotOffset(NewPivotOffset);
-		Actor->PostEditMove(true);
-		Actor->MarkPackageDirty();
 		bChangedAny = true;
 	}
 
@@ -977,7 +1061,11 @@ bool FBlendViewTransformTargetAdapter::ApplyActorPivotTranslationDelta(
 	}
 
 	InOutCurrentPivotLocation = FBlendViewSnapSolver::CleanNearIntegerVector(InitialPivotLocation + CleanDelta);
-	RefreshActorPivotEditing();
+	bActorPivotTransformApplied = true;
+	if (GEditor)
+	{
+		GEditor->RedrawLevelEditingViewports(false);
+	}
 	return true;
 }
 
@@ -1022,8 +1110,6 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentRotationDelta(
 	{
 		NativeComponentContext.ViewportClient->Invalidate();
 	}
-	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
-	FEditorSupportDelegates::UpdateUI.Broadcast();
 	return true;
 }
 
@@ -1067,8 +1153,6 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentScaleFactor(
 	{
 		NativeComponentContext.ViewportClient->Invalidate();
 	}
-	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
-	FEditorSupportDelegates::UpdateUI.Broadcast();
 	return true;
 }
 
@@ -1112,7 +1196,5 @@ bool FBlendViewTransformTargetAdapter::ApplyNativeComponentMirrorTransform(
 	{
 		NativeComponentContext.ViewportClient->Invalidate();
 	}
-	FEditorSupportDelegates::RefreshPropertyWindows.Broadcast();
-	FEditorSupportDelegates::UpdateUI.Broadcast();
 	return true;
 }

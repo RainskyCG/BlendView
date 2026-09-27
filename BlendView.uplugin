@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
-  "Version": 2,
-  "VersionName": "1.1.0",
+  "Version": 3,
+  "VersionName": "1.2.0",
   "EngineVersion": "5.7.0",
   "FriendlyName": "BlendView",
   "Description": "Blender-style viewport navigation, modal transforms, snapping, and graph editing workflow for Unreal Editor.",

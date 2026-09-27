@@ -224,6 +224,10 @@ namespace BlendViewSettingsCustomizationPrivate
 			TEXT("轨道旋转灵敏度"), TEXT("Orbit Sensitivity"),
 			TEXT("BlendView 中键轨道旋转的每像素角度。所有支持的编辑器视口共用此值。"),
 			TEXT("Degrees per pixel for BlendView MMB orbit. Shared by all supported editor viewports."));
+		LocalizeProperty(DetailBuilder, GET_MEMBER_NAME_CHECKED(UBlendViewSettings, bOrbitAroundSelection),
+			TEXT("围绕选择旋转"), TEXT("Orbit Around Selection"),
+			TEXT("开启后，中键旋转开始时使用当前选择中心作为旋转中心；没有有效选择时使用当前视图中心。"),
+			TEXT("Use the current selection center when MMB orbit begins. Fall back to the current view center when there is no valid selection."));
 		LocalizeProperty(DetailBuilder, GET_MEMBER_NAME_CHECKED(UBlendViewSettings, bInvertOrbitYAxis),
 			TEXT("反转轨道旋转 Y 轴"), TEXT("Invert Orbit Y Axis"),
 			TEXT("反转 BlendView 中键轨道旋转的垂直方向。"),

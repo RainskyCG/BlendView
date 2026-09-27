@@ -6,6 +6,7 @@ DerivedDataCache/
 .vs/
 .vscode/
 .idea/
+.obsidian/
 .agents/
 .codex/
 *.sln

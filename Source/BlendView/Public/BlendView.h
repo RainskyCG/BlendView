@@ -46,6 +46,8 @@ private:
 	bool IsTransformWorkflowEnabled() const;
 	void ToggleMouseNavigation();
 	bool IsMouseNavigationEnabled() const;
+	void ToggleOrbitAroundSelection();
+	bool IsOrbitAroundSelectionEnabled() const;
 	void ToggleCenterToolbar();
 	bool IsCenterToolbarVisible() const;
 	void ToggleRightMouseFlyBoost();

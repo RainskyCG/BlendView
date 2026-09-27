@@ -181,7 +181,7 @@ EBlendViewInputResult FBlendViewInputRouter::RouteInput(const FBlendViewInputEve
 		{
 			LastViewportContext = FlightNavigationContext;
 		}
-		else
+		else if (Event.Type != EBlendViewInputEventType::MouseMove)
 		{
 			const FVector2D PointerScreenPosition = IsPointerEvent(Event)
 				? Event.ScreenPosition
@@ -295,7 +295,6 @@ EBlendViewInputResult FBlendViewInputRouter::RouteInput(const FBlendViewInputEve
 
 	if (NavigationController.IsNavigating())
 	{
-		const bool bWasAxisViewActive = NavigationController.IsAxisViewActive();
 		EBlendViewInputResult NavigationResult = Settings && Settings->bEnableMouseNavigation
 			? NavigationController.RouteInput(Event)
 			: EBlendViewInputResult::PassThrough;
@@ -303,19 +302,13 @@ EBlendViewInputResult FBlendViewInputRouter::RouteInput(const FBlendViewInputEve
 		{
 			NavigationController.EndNavigation();
 		}
-		if (bWasAxisViewActive || NavigationController.IsAxisViewActive())
-		{
-			bNavigationReleasePassThrough = false;
-		}
 		if (!NavigationController.IsNavigating())
 		{
 			if (Event.Type == EBlendViewInputEventType::MouseUp &&
-				Event.Key == EKeys::MiddleMouseButton &&
-				!bNavigationReleasePassThrough)
+				Event.Key == EKeys::MiddleMouseButton)
 			{
 				NavigationResult = EBlendViewInputResult::Handled;
 			}
-			bNavigationReleasePassThrough = true;
 			StateMachine.Reset();
 			ReleasePointerState();
 		}
@@ -323,16 +316,21 @@ EBlendViewInputResult FBlendViewInputRouter::RouteInput(const FBlendViewInputEve
 		return NavigationResult;
 	}
 
+	if (Settings && Settings->bEnableMouseNavigation)
+	{
+		const EBlendViewInputResult PersistentAxisViewResult =
+			NavigationController.RoutePersistentAxisViewInput(Event, LastViewportContext);
+		if (PersistentAxisViewResult == EBlendViewInputResult::Handled)
+		{
+			return PersistentAxisViewResult;
+		}
+	}
+
 	if (Settings && Settings->bEnableMouseNavigation && !FlightInputState.IsRightMouseDown() && NavigationController.TryBegin(Event, LastViewportContext))
 	{
-		bNavigationReleasePassThrough =
-			LastViewportContext.Kind == EBlendViewViewportKind::LevelEditor &&
-			!NavigationController.IsAxisViewActive();
 		StateMachine.EnterNavigation();
 		UpdateNavigationStatusBar(Settings);
-		return bNavigationReleasePassThrough
-			? EBlendViewInputResult::PassThrough
-			: EBlendViewInputResult::Handled;
+		return EBlendViewInputResult::Handled;
 	}
 
 	if (!ShouldBlockNewBlendViewShortcut())
@@ -684,7 +682,7 @@ void FBlendViewInputRouter::RestorePointerAfterCursorPlacement(const FBlendViewV
 
 void FBlendViewInputRouter::CancelActiveOperation()
 {
-	NavigationController.EndNavigation();
+	NavigationController.ResetPersistentAxisView();
 	GraphTransformController.Cancel();
 	ToolManager.CancelActiveTool();
 	StateMachine.Reset();
@@ -692,7 +690,6 @@ void FBlendViewInputRouter::CancelActiveOperation()
 	bSuppressFlightAltUntilKeyUp = false;
 	bSuppressNextRightMouseUp = false;
 	bSuppressPointerInputUntilRightMouseUp = false;
-	bNavigationReleasePassThrough = true;
 	CancelCursorPlacement();
 	FBlendViewStatusBarPresenter::Get().Restore();
 	ReleasePointerState();
@@ -700,7 +697,7 @@ void FBlendViewInputRouter::CancelActiveOperation()
 
 void FBlendViewInputRouter::PrepareForEngineExit()
 {
-	NavigationController.EndNavigation();
+	NavigationController.PrepareForEngineExit();
 	GraphTransformController.PrepareForEngineExit();
 	ToolManager.PrepareForEngineExit();
 	StateMachine.Reset();
@@ -712,7 +709,6 @@ void FBlendViewInputRouter::PrepareForEngineExit()
 	bSuppressFlightAltUntilKeyUp = false;
 	bSuppressNextRightMouseUp = false;
 	bSuppressPointerInputUntilRightMouseUp = false;
-	bNavigationReleasePassThrough = true;
 	CancelCursorPlacement();
 }
 
@@ -1332,6 +1328,10 @@ bool FBlendViewInputRouter::IsViewportMouseButtonDown(const FKey& Key) const
 	}
 
 	if (!FSlateApplication::IsInitialized())
+	{
+		return false;
+	}
+	if (!FSlateApplication::Get().GetPressedMouseButtons().Contains(Key))
 	{
 		return false;
 	}

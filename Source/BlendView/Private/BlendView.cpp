@@ -354,6 +354,18 @@ TSharedRef<SWidget> FBlendViewModule::GenerateOptionsMenu()
 		NAME_None,
 		EUserInterfaceActionType::ToggleButton);
 	MenuBuilder.AddMenuEntry(
+		FBlendViewLocalization::Text(TEXT("\u56F4\u7ED5\u9009\u62E9\u65CB\u8F6C"), TEXT("Orbit Around Selection")),
+		FBlendViewLocalization::Text(
+			TEXT("\u4E2D\u952E\u65CB\u8F6C\u5F00\u59CB\u65F6\u4F7F\u7528\u5F53\u524D\u9009\u62E9\u4E2D\u5FC3\uFF1B\u6CA1\u6709\u6709\u6548\u9009\u62E9\u65F6\u4F7F\u7528\u5F53\u524D\u89C6\u56FE\u4E2D\u5FC3\u3002"),
+			TEXT("Use the current selection center when MMB orbit begins; fall back to the current view center when there is no valid selection.")),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateRaw(this, &FBlendViewModule::ToggleOrbitAroundSelection),
+			FCanExecuteAction(),
+			FIsActionChecked::CreateRaw(this, &FBlendViewModule::IsOrbitAroundSelectionEnabled)),
+		NAME_None,
+		EUserInterfaceActionType::ToggleButton);
+	MenuBuilder.AddMenuEntry(
 		FBlendViewLocalization::Text(TEXT("\u663E\u793A\u5C45\u4E2D\u5DE5\u5177\u680F"), TEXT("Show Center Toolbar")),
 		FBlendViewLocalization::Text(
 			TEXT("\u5728\u5173\u5361\u89C6\u53E3\u9876\u90E8\u5C45\u4E2D\u663E\u793A BlendView \u7684\u8F74\u5FC3\u70B9\u548C\u5438\u9644\u5FEB\u6377\u5DE5\u5177\u680F\u3002"),
@@ -777,6 +789,19 @@ bool FBlendViewModule::IsMouseNavigationEnabled() const
 {
 	const UBlendViewSettings* Settings = GetDefault<UBlendViewSettings>();
 	return Settings && Settings->bEnableMouseNavigation;
+}
+
+void FBlendViewModule::ToggleOrbitAroundSelection()
+{
+	UBlendViewSettings* Settings = GetMutableDefault<UBlendViewSettings>();
+	Settings->bOrbitAroundSelection = !Settings->bOrbitAroundSelection;
+	Settings->SaveConfig();
+}
+
+bool FBlendViewModule::IsOrbitAroundSelectionEnabled() const
+{
+	const UBlendViewSettings* Settings = GetDefault<UBlendViewSettings>();
+	return Settings && Settings->bOrbitAroundSelection;
 }
 
 void FBlendViewModule::ToggleCenterToolbar()
