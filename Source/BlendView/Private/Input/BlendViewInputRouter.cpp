@@ -24,6 +24,7 @@
 #include "ILevelEditor.h"
 #include "ISceneOutliner.h"
 #include "InputCoreTypes.h"
+#include "Input/BlendViewInputFocus.h"
 #include "Layout/WidgetPath.h"
 #include "LevelEditor.h"
 #include "LevelEditorActions.h"
@@ -111,25 +112,6 @@ namespace
 			}
 		}
 		return false;
-	}
-
-	bool IsTextEntryFocused()
-	{
-		if (!FSlateApplication::IsInitialized())
-		{
-			return false;
-		}
-
-		const TSharedPtr<SWidget> FocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
-		if (!FocusedWidget.IsValid())
-		{
-			return false;
-		}
-
-		const FString WidgetType = FocusedWidget->GetType().ToString();
-		return WidgetType.Contains(TEXT("EditableText")) ||
-			WidgetType.Contains(TEXT("SearchBox")) ||
-			WidgetType.Contains(TEXT("SuggestionTextBox"));
 	}
 
 	bool IsFlightSpeedModifierKey(const FKey& Key)
@@ -1309,7 +1291,7 @@ EBlendViewInputResult FBlendViewInputRouter::TryBeginTransformTool(const FBlendV
 
 bool FBlendViewInputRouter::ShouldBlockNewBlendViewShortcut() const
 {
-	return IsTextEntryFocused() ||
+	return BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget() ||
 		IsFlightNavigationInputActive() ||
 		IsMouseNavigationButtonDownInViewport() ||
 		NavigationController.IsNavigating();

@@ -8,6 +8,7 @@
 #include "Core/BlendViewStateMachine.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GenericPlatform/GenericApplication.h"
+#include "Input/BlendViewInputFocus.h"
 #include "Input/BlendViewInputRouter.h"
 #include "QuickFavorites/BlendViewQuickFavorites.h"
 #include "SLevelViewport.h"
@@ -46,25 +47,6 @@ namespace
 		TargetEvent.ScreenPosition = SourceEvent.GetScreenSpacePosition();
 		TargetEvent.CursorDelta = SourceEvent.GetCursorDelta();
 		CopyKeyModifiers(SourceEvent, TargetEvent);
-	}
-
-	bool IsBlendViewPieTextEntryFocused()
-	{
-		if (!FSlateApplication::IsInitialized())
-		{
-			return false;
-		}
-
-		const TSharedPtr<SWidget> FocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
-		if (!FocusedWidget.IsValid())
-		{
-			return false;
-		}
-
-		const FString WidgetType = FocusedWidget->GetType().ToString();
-		return WidgetType.Contains(TEXT("EditableText")) ||
-			WidgetType.Contains(TEXT("SearchBox")) ||
-			WidgetType.Contains(TEXT("SuggestionTextBox"));
 	}
 
 	struct FBlendViewPieViewportHit
@@ -170,6 +152,7 @@ FBlendViewInputProcessor::~FBlendViewInputProcessor()
 
 void FBlendViewInputProcessor::Tick(float DeltaTime, FSlateApplication& SlateApp, TSharedRef<ICursor> Cursor)
 {
+	YieldToFocusedKeyboardInput();
 	if (InputRouter.IsValid())
 	{
 		InputRouter->Tick(DeltaTime);
@@ -236,6 +219,11 @@ void FBlendViewInputProcessor::Tick(float DeltaTime, FSlateApplication& SlateApp
 
 bool FBlendViewInputProcessor::HandleKeyDownEvent(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent)
 {
+	if (YieldToFocusedKeyboardInput())
+	{
+		return false;
+	}
+
 	if (TryOpenQuickFavorites(SlateApp, InKeyEvent))
 	{
 		return true;
@@ -277,6 +265,11 @@ bool FBlendViewInputProcessor::HandleKeyDownEvent(FSlateApplication& SlateApp, c
 
 bool FBlendViewInputProcessor::HandleKeyUpEvent(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent)
 {
+	if (YieldToFocusedKeyboardInput())
+	{
+		return false;
+	}
+
 	if (IsPieMenuOpen() && IsBlendViewPieModifierKey(InKeyEvent.GetKey()))
 	{
 		if (PieMenuWidget.IsValid())
@@ -337,6 +330,19 @@ bool FBlendViewInputProcessor::HandleMouseMoveEvent(FSlateApplication& SlateApp,
 
 bool FBlendViewInputProcessor::HandleMouseButtonDownEvent(FSlateApplication& SlateApp, const FPointerEvent& MouseEvent)
 {
+	if (BlendViewInputFocus::IsKeyboardInputOwnedByWidgetAtPosition(
+			SlateApp,
+			MouseEvent.GetScreenSpacePosition()))
+	{
+		ClosePieMenu();
+		bIgnoreNextMouseMoveAfterCursorWrap = false;
+		if (InputRouter.IsValid() && InputRouter->GetState() != EBlendViewInteractionState::Idle)
+		{
+			InputRouter->CancelActiveOperation();
+		}
+		return false;
+	}
+
 	if (IsPieMenuOpen())
 	{
 		if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && PieMenuWidget.IsValid())
@@ -454,6 +460,22 @@ EBlendViewInteractionState FBlendViewInputProcessor::GetState() const
 		: EBlendViewInteractionState::Idle;
 }
 
+bool FBlendViewInputProcessor::YieldToFocusedKeyboardInput()
+{
+	if (!BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget())
+	{
+		return false;
+	}
+
+	ClosePieMenu();
+	bIgnoreNextMouseMoveAfterCursorWrap = false;
+	if (InputRouter.IsValid() && InputRouter->GetState() != EBlendViewInteractionState::Idle)
+	{
+		InputRouter->CancelActiveOperation();
+	}
+	return true;
+}
+
 void FBlendViewInputProcessor::HandleApplicationActivationChanged(const bool bIsActive)
 {
 	if (!bIsActive)
@@ -494,7 +516,7 @@ bool FBlendViewInputProcessor::TryTogglePieMenu(FSlateApplication& SlateApp, con
 		InputRouter->GetState() != EBlendViewInteractionState::Idle ||
 		!Settings ||
 		!Settings->bEnablePieMenu ||
-		IsBlendViewPieTextEntryFocused() ||
+		BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget() ||
 		!FindBlendViewPieLevelViewportUnderCursor(SlateApp).IsValid())
 	{
 		UE_LOG(LogBlendViewPieMenu, Verbose, TEXT("Shift+S pie menu rejected. Router=%d Enabled=%d State=%d Settings=%d PieEnabled=%d TextFocused=%d ViewportUnderCursor=%d"),
@@ -503,7 +525,7 @@ bool FBlendViewInputProcessor::TryTogglePieMenu(FSlateApplication& SlateApp, con
 			InputRouter.IsValid() ? static_cast<int32>(InputRouter->GetState()) : -1,
 			Settings ? 1 : 0,
 			Settings && Settings->bEnablePieMenu ? 1 : 0,
-			IsBlendViewPieTextEntryFocused() ? 1 : 0,
+			BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget() ? 1 : 0,
 			FindBlendViewPieLevelViewportUnderCursor(SlateApp).IsValid() ? 1 : 0);
 		return false;
 	}

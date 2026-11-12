@@ -6,6 +6,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "GraphEditor.h"
 #include "Layout/WidgetPath.h"
+#include "Input/BlendViewInputFocus.h"
 #include "SGraphNode.h"
 #include "SGraphPanel.h"
 #include "Widgets/SOverlay.h"
@@ -22,13 +23,6 @@ namespace
 		return WidgetType.ToString().Contains(TEXT("SGraphNode"));
 	}
 
-	bool IsBlendViewTextInputWidgetType(const FName WidgetType)
-	{
-		const FString WidgetTypeName = WidgetType.ToString();
-		return WidgetTypeName.Contains(TEXT("EditableText")) ||
-			WidgetTypeName.Contains(TEXT("SearchBox")) ||
-			WidgetTypeName.Contains(TEXT("SuggestionTextBox"));
-	}
 }
 
 bool FBlendViewGraphContext::HasBlockingNodeUnderCursor() const
@@ -107,19 +101,5 @@ TSharedPtr<SWindow> FBlendViewGraphContextResolver::FindHostWindow(
 
 bool FBlendViewGraphContextResolver::IsTextInputFocused()
 {
-	if (!FSlateApplication::IsInitialized())
-	{
-		return false;
-	}
-
-	TSharedPtr<SWidget> FocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
-	while (FocusedWidget.IsValid())
-	{
-		if (IsBlendViewTextInputWidgetType(FocusedWidget->GetType()))
-		{
-			return true;
-		}
-		FocusedWidget = FocusedWidget->GetParentWidget();
-	}
-	return false;
+	return BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget();
 }

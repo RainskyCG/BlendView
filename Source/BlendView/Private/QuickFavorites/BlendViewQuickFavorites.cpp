@@ -13,6 +13,7 @@
 #include "EdMode.h"
 #include "EditorModeManager.h"
 #include "InputCoreTypes.h"
+#include "Input/BlendViewInputFocus.h"
 #include "LevelEditor.h"
 #include "Localization/BlendViewLocalization.h"
 #include "Modules/ModuleManager.h"
@@ -66,25 +67,6 @@ namespace
 			return NewStyle;
 		}();
 		return &Style;
-	}
-
-	bool IsQuickFavoritesTextEntryFocused()
-	{
-		if (!FSlateApplication::IsInitialized())
-		{
-			return false;
-		}
-
-		const TSharedPtr<SWidget> FocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
-		if (!FocusedWidget.IsValid())
-		{
-			return false;
-		}
-
-		const FString WidgetType = FocusedWidget->GetType().ToString();
-		return WidgetType.Contains(TEXT("EditableText")) ||
-			WidgetType.Contains(TEXT("SearchBox")) ||
-			WidgetType.Contains(TEXT("SuggestionTextBox"));
 	}
 
 	bool MatchesCommandChord(const FKeyEvent& KeyEvent, const TSharedPtr<FUICommandInfo>& Command)
@@ -924,7 +906,7 @@ bool FBlendViewQuickFavorites::TryOpenMenu(
 		: Settings && Settings->bEnableQuickFavorites;
 	if (!Settings ||
 		!bFeatureEnabled ||
-		IsQuickFavoritesTextEntryFocused() ||
+		BlendViewInputFocus::IsKeyboardInputOwnedByFocusedWidget() ||
 		SlateApp.GetPressedMouseButtons().Contains(EKeys::RightMouseButton))
 	{
 		return false;

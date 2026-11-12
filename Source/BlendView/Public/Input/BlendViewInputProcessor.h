@@ -39,6 +39,7 @@ public:
 	EBlendViewInteractionState GetState() const;
 
 private:
+	bool YieldToFocusedKeyboardInput();
 	void HandleApplicationActivationChanged(bool bIsActive);
 	bool TryTogglePieMenu(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent);
 	bool TryOpenQuickFavorites(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent);
