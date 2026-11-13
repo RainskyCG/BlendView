@@ -14,6 +14,9 @@ class UTransformProxy;
 struct FBlendViewActorTransformSnapshot
 {
 	TWeakObjectPtr<AActor> Actor;
+	TWeakObjectPtr<USceneComponent> RootComponent;
+	FTransform InitialRelativeTransform = FTransform::Identity;
+	FRotator InitialRelativeRotation = FRotator::ZeroRotator;
 	FTransform InitialTransform = FTransform::Identity;
 	FTransform BaselineTransform = FTransform::Identity;
 	FVector InitialPivotOffset = FVector::ZeroVector;
@@ -123,6 +126,7 @@ private:
 		const TArray<TWeakObjectPtr<USceneComponent>>& ExplicitComponents);
 	void AddNativeComponentSnapshot(USceneComponent* Component, UWorld* ViewportWorld);
 	void FinalizeActorPivotTransform();
+	void CommitLevelActorTransforms();
 	void FinalizeNativeComponentTransform();
 	bool BindModelingPivotTarget(
 		UTransformProxy* TransformProxy,
@@ -149,6 +153,7 @@ private:
 	FTransform BaselineModelingPivotTransform = FTransform::Identity;
 	TUniquePtr<FScopedTransaction> ActiveTransaction;
 	bool bNativeComponentTransformActive = false;
+	bool bLevelActorTransformsCommitted = false;
 	bool bManualNativeComponentTransformApplied = false;
 	bool bActorPivotTransformApplied = false;
 	bool bModelingPivotTransformActive = false;

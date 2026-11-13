@@ -20,6 +20,7 @@
 #include "Tools/BlendViewTransformPrecision.h"
 #include "Tools/BlendViewTransformSelectionResolver.h"
 #include "UnrealEdGlobals.h"
+#include "UObject/UnrealType.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBlendViewTransformTarget, Log, All);
 
@@ -380,6 +381,12 @@ bool FBlendViewTransformTargetAdapter::CaptureLevelActors(
 
 		FBlendViewActorTransformSnapshot Snapshot;
 		Snapshot.Actor = Actor;
+		if (USceneComponent* Root = Actor->GetRootComponent())
+		{
+			Snapshot.RootComponent = Root;
+			Snapshot.InitialRelativeTransform = Root->GetRelativeTransform();
+			Snapshot.InitialRelativeRotation = Root->GetRelativeRotation();
+		}
 		Snapshot.InitialTransform = Actor->GetActorTransform();
 		Snapshot.BaselineTransform = Snapshot.InitialTransform;
 		Snapshot.InitialPivotOffset = Actor->GetPivotOffset();
@@ -625,10 +632,103 @@ void FBlendViewTransformTargetAdapter::RefreshNativeComponentBindings()
 
 void FBlendViewTransformTargetAdapter::Confirm()
 {
+	CommitLevelActorTransforms();
 	FinalizeActorPivotTransform();
 	FinalizeNativeComponentTransform();
 	EndModelingPivotTransform();
 	ActiveTransaction.Reset();
+}
+
+void FBlendViewTransformTargetAdapter::CommitLevelActorTransforms()
+{
+	if (Kind != EBlendViewTransformTargetKind::LevelActors || bLevelActorTransformsCommitted)
+	{
+		return;
+	}
+	bLevelActorTransformsCommitted = true;
+
+	struct FPendingEdit
+	{
+		TWeakObjectPtr<AActor> Actor;
+		TWeakObjectPtr<USceneComponent> Root;
+		FTransform Before;
+		FRotator BeforeRotation;
+		FTransform After;
+		FRotator AfterRotation;
+		FProperty* Property = nullptr;
+	};
+	TArray<FPendingEdit> Edits;
+	for (const FBlendViewActorTransformSnapshot& Snapshot : ActorSnapshots)
+	{
+		AActor* Actor = Snapshot.Actor.Get();
+		USceneComponent* Root = Snapshot.RootComponent.Get();
+		if (!IsValid(Actor) || !IsValid(Root) || Actor->GetRootComponent() != Root)
+		{
+			continue;
+		}
+		const FTransform After = Root->GetRelativeTransform();
+		const FRotator AfterRotation = Root->GetRelativeRotation();
+		FName PropertyName = NAME_None;
+		if (!After.GetLocation().Equals(Snapshot.InitialRelativeTransform.GetLocation()))
+		{
+			PropertyName = USceneComponent::GetRelativeLocationPropertyName();
+		}
+		else if (!AfterRotation.Equals(Snapshot.InitialRelativeRotation))
+		{
+			PropertyName = USceneComponent::GetRelativeRotationPropertyName();
+		}
+		else if (!After.GetScale3D().Equals(Snapshot.InitialRelativeTransform.GetScale3D()))
+		{
+			PropertyName = USceneComponent::GetRelativeScale3DPropertyName();
+		}
+		if (PropertyName != NAME_None)
+		{
+			Edits.Add({Actor, Root, Snapshot.InitialRelativeTransform, Snapshot.InitialRelativeRotation,
+				After, AfterRotation, FindFProperty<FProperty>(USceneComponent::StaticClass(), PropertyName)});
+		}
+	}
+
+	const auto ApplyRelativeTransform = [](const FPendingEdit& Edit, const bool bBefore)
+	{
+		if (USceneComponent* Root = Edit.Root.Get())
+		{
+			const FTransform& Transform = bBefore ? Edit.Before : Edit.After;
+			Root->SetRelativeLocationAndRotation(Transform.GetLocation(),
+				bBefore ? Edit.BeforeRotation : Edit.AfterRotation, false, nullptr, ETeleportType::TeleportPhysics);
+			Root->SetRelativeRotationExact(bBefore ? Edit.BeforeRotation : Edit.AfterRotation,
+				false, nullptr, ETeleportType::TeleportPhysics);
+			Root->SetRelativeScale3D(Transform.GetScale3D());
+		}
+	};
+
+	// Publish a single native property edit only on confirmation. Cache every final
+	// relative transform first, so attached selections and Sequencer evaluation
+	// cannot overwrite another target's pending result. Preview/cancel never key.
+	for (const FPendingEdit& Edit : Edits)
+	{
+		ApplyRelativeTransform(Edit, true);
+	}
+	for (const FPendingEdit& Edit : Edits)
+	{
+		if (AActor* Actor = Edit.Actor.Get())
+		{
+			FEditPropertyChain Chain;
+			Chain.AddHead(Edit.Property);
+			FCoreUObjectDelegates::OnPreObjectPropertyChanged.Broadcast(Actor, Chain);
+		}
+	}
+	for (const FPendingEdit& Edit : Edits)
+	{
+		ApplyRelativeTransform(Edit, false);
+	}
+	for (const FPendingEdit& Edit : Edits)
+	{
+		if (AActor* Actor = Edit.Actor.Get())
+		{
+			FPropertyChangedEvent Event(Edit.Property, EPropertyChangeType::ValueSet);
+			FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(Actor, Event);
+		}
+	}
 }
 
 void FBlendViewTransformTargetAdapter::CancelTransaction()
@@ -668,6 +768,7 @@ void FBlendViewTransformTargetAdapter::PrepareForEngineExit()
 
 void FBlendViewTransformTargetAdapter::Reset()
 {
+	bLevelActorTransformsCommitted = false;
 	Kind = EBlendViewTransformTargetKind::None;
 	NativeComponentContext = FBlendViewViewportContext();
 	ActorSnapshots.Reset();

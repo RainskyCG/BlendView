@@ -39,5 +39,13 @@ public class BlendView : ModuleRules
 				"ToolMenus",
 				"UnrealEd"
 			});
+
+		if (Target.bBuildDeveloperTools)
+		{
+			PrivateDependencyModuleNames.AddRange(new[]
+			{
+				"LevelSequence", "MovieScene", "MovieSceneTracks", "MovieSceneTools", "Sequencer"
+			});
+		}
 	}
 }
